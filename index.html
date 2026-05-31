@@ -4,6 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gearbox Garage Workspace</title>
+    <script>
+      (function() {
+        try {
+          const originalFetch = window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            get() {
+              return originalFetch;
+            },
+            set(val) {
+              console.warn('Gracefully ignored attempt to overwrite window.fetch:', val);
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          console.error('Failed to configure window.fetch setter:', e);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

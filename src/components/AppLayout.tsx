@@ -16,7 +16,9 @@ import {
   Calendar,
   User,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Home,
+  Mail
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -30,12 +32,14 @@ export function AppLayout({ id, activePath, onNavigate, children }: AppLayoutPro
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigationItems = [
+    { name: 'Home', path: 'home', icon: <Home size={18} /> },
     { name: 'Dashboard', path: 'dashboard', icon: <TrendingUp size={18} /> },
     { name: 'Customers', path: 'customers', icon: <Users size={18} /> },
     { name: 'Vehicles', path: 'vehicles', icon: <Car size={18} /> },
     { name: 'Service Records', path: 'services', icon: <Wrench size={18} /> },
     { name: 'Work Orders', path: 'workorders', icon: <CheckSquare size={18} /> },
-    { name: 'Invoices', path: 'invoices', icon: <FileText size={18} /> }
+    { name: 'Invoices', path: 'invoices', icon: <FileText size={18} /> },
+    { name: 'Contact', path: 'contact', icon: <Mail size={18} /> }
   ];
 
   const getPageTitle = () => {

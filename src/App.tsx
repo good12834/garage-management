@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from './components/AppLayout';
+import { HomePage } from './pages/Home';
+import { ContactPage } from './pages/Contact';
 import { DashboardPage } from './pages/Dashboard';
 import { CustomersPage } from './pages/Customers';
 import { VehiclesPage } from './pages/Vehicles';
@@ -16,7 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Wrench } from 'lucide-react';
 
 export default function App() {
-  const [activePath, setActivePath] = useState<string>('dashboard');
+  const [activePath, setActivePath] = useState<string>('home');
   const [loading, setLoading] = useState<boolean>(true);
   const [errorWord, setErrorWord] = useState<string | null>(null);
 
@@ -189,6 +191,15 @@ export default function App() {
     }
 
     switch (activePath) {
+      case 'home':
+        return (
+          <HomePage
+            onEnterDashboard={() => setActivePath('dashboard')}
+            onNavigateToContact={() => setActivePath('contact')}
+          />
+        );
+      case 'contact':
+        return <ContactPage />;
       case 'dashboard':
         return stats ? (
           <DashboardPage stats={stats} onNavigate={setActivePath} />
