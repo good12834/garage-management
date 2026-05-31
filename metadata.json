@@ -1,0 +1,6 @@
+{
+  "name": "Garage Management App",
+  "description": "Full-stack automotive shop manager with dashboards, customer and vehicle directories, live service logs, interactive work order status, and invoices.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
