@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -13,14 +14,65 @@ import { VehiclesPage } from './pages/Vehicles';
 import { ServiceRecordsPage } from './pages/ServiceRecords';
 import { WorkOrdersPage } from './pages/WorkOrders';
 import { InvoicesPage } from './pages/Invoices';
+import { LoginPage } from './pages/Login';
 import { Customer, Vehicle, ServiceRecord, WorkOrder, Invoice, DashboardStats } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Wrench } from 'lucide-react';
+
+// Safe LocalStorage wrapper to avoid SecurityError in sandboxed iframes
+const safeStorage = {
+  getItem(key: string): string | null {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.warn('localStorage is blocked or unavailable:', e);
+      return null;
+    }
+  },
+  setItem(key: string, value: string): void {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn('localStorage is blocked or unavailable:', e);
+    }
+  },
+  removeItem(key: string): void {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn('localStorage is blocked or unavailable:', e);
+    }
+  }
+};
 
 export default function App() {
   const [activePath, setActivePath] = useState<string>('home');
   const [loading, setLoading] = useState<boolean>(true);
   const [errorWord, setErrorWord] = useState<string | null>(null);
+
+  // Authentication State with local persistence fallback
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return safeStorage.getItem('garage_authenticated') === 'true';
+  });
+  const [userEmail, setUserEmail] = useState<string | null>(() => {
+    return safeStorage.getItem('garage_user_email');
+  });
+
+  const isPathProtected = (path: string): boolean => {
+    return ['dashboard', 'customers', 'vehicles', 'services', 'workorders', 'invoices'].includes(path);
+  };
+
+  const handleSignOut = () => {
+    setIsAuthenticated(false);
+    setUserEmail(null);
+    safeStorage.removeItem('garage_authenticated');
+    safeStorage.removeItem('garage_user_email');
+    setActivePath('home');
+  };
+
+  const handleSignInClick = () => {
+    setActivePath('dashboard');
+  };
 
   // Core Entity States
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -33,33 +85,46 @@ export default function App() {
   // Asynchronous full syncing from Backend
   const syncWorkspaceData = async () => {
     try {
-      const [resC, resV, resS, resW, resI, resStats] = await Promise.all([
-        fetch('/api/customers'),
-        fetch('/api/vehicles'),
-        fetch('/api/services'),
-        fetch('/api/workorders'),
-        fetch('/api/invoices'),
-        fetch('/api/dashboard/stats')
-      ]);
+      const endpoints = [
+        { name: 'customers', url: '/api/customers' },
+        { name: 'vehicles', url: '/api/vehicles' },
+        { name: 'services', url: '/api/services' },
+        { name: 'workorders', url: '/api/workorders' },
+        { name: 'invoices', url: '/api/invoices' },
+        { name: 'stats', url: '/api/dashboard/stats' }
+      ];
 
-      if (!resC.ok || !resV.ok || !resS.ok || !resW.ok || !resI.ok || !resStats.ok) {
-        throw new Error('Failed to synchronize server collections.');
+      const responses = await Promise.all(endpoints.map(ep => fetch(ep.url)));
+
+      for (let i = 0; i < responses.length; i++) {
+        if (!responses[i].ok) {
+          throw new Error(`Failed to synchronize server collection: ${endpoints[i].name} (Status ${responses[i].status})`);
+        }
       }
 
-      const [dataC, dataV, dataS, dataW, dataI, dataStats] = await Promise.all([
-        resC.json(),
-        resV.json(),
-        resS.json(),
-        resW.json(),
-        resI.json(),
-        resStats.json()
-      ]);
+      const texts = await Promise.all(responses.map(res => res.text()));
 
-      setCustomers(dataC);
-      setVehicles(dataV);
-      setServices(dataS);
-      setWorkorders(dataW);
-      setInvoices(dataI);
+      const parsedData = texts.map((text, idx) => {
+        try {
+          if (!text || text.trim() === 'undefined' || text.trim() === '') {
+            console.warn(`Empty or undefined response text for ${endpoints[idx].name}. Fallback to empty array/null.`);
+            if (endpoints[idx].name === 'stats') return null;
+            return [];
+          }
+          return JSON.parse(text);
+        } catch (err: any) {
+          console.error(`JSON parse error in ${endpoints[idx].name} text raw:`, text);
+          throw new Error(`Invalid JSON response for ${endpoints[idx].name}: ${err.message}. Raw text: ${text.slice(0, 100)}`);
+        }
+      });
+
+      const [dataC, dataV, dataS, dataW, dataI, dataStats] = parsedData;
+
+      setCustomers(dataC || []);
+      setVehicles(dataV || []);
+      setServices(dataS || []);
+      setWorkorders(dataW || []);
+      setInvoices(dataI || []);
       setStats(dataStats);
       setErrorWord(null);
     } catch (err: any) {
@@ -190,6 +255,21 @@ export default function App() {
       );
     }
 
+    if (isPathProtected(activePath) && !isAuthenticated) {
+      return (
+        <LoginPage
+          onLoginSuccess={(email) => {
+            setIsAuthenticated(true);
+            setUserEmail(email);
+            safeStorage.setItem('garage_authenticated', 'true');
+            safeStorage.setItem('garage_user_email', email);
+          }}
+          targetPath={activePath}
+          onCancel={() => setActivePath('home')}
+        />
+      );
+    }
+
     switch (activePath) {
       case 'home':
         return (
@@ -263,7 +343,14 @@ export default function App() {
   };
 
   return (
-    <AppLayout activePath={activePath} onNavigate={setActivePath}>
+    <AppLayout
+      activePath={activePath}
+      onNavigate={setActivePath}
+      isAuthenticated={isAuthenticated}
+      userEmail={userEmail}
+      onSignOut={handleSignOut}
+      onSignInClick={handleSignInClick}
+    >
       <AnimatePresence mode="wait">
         <motion.div
           key={activePath + (loading ? '-loading' : '-ready')}
