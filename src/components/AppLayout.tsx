@@ -18,7 +18,8 @@ import {
   LogOut,
   ChevronRight,
   Home,
-  Mail
+  Mail,
+  Lock
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -26,20 +27,33 @@ interface AppLayoutProps {
   activePath: string;
   onNavigate: (path: string) => void;
   children: React.ReactNode;
+  isAuthenticated?: boolean;
+  userEmail?: string | null;
+  onSignOut?: () => void;
+  onSignInClick?: () => void;
 }
 
-export function AppLayout({ id, activePath, onNavigate, children }: AppLayoutProps) {
+export function AppLayout({
+  id,
+  activePath,
+  onNavigate,
+  children,
+  isAuthenticated = false,
+  userEmail = null,
+  onSignOut,
+  onSignInClick
+}: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigationItems = [
-    { name: 'Home', path: 'home', icon: <Home size={18} /> },
-    { name: 'Dashboard', path: 'dashboard', icon: <TrendingUp size={18} /> },
-    { name: 'Customers', path: 'customers', icon: <Users size={18} /> },
-    { name: 'Vehicles', path: 'vehicles', icon: <Car size={18} /> },
-    { name: 'Service Records', path: 'services', icon: <Wrench size={18} /> },
-    { name: 'Work Orders', path: 'workorders', icon: <CheckSquare size={18} /> },
-    { name: 'Invoices', path: 'invoices', icon: <FileText size={18} /> },
-    { name: 'Contact', path: 'contact', icon: <Mail size={18} /> }
+    { name: 'Home', path: 'home', icon: <Home size={18} />, isProtected: false },
+    { name: 'Dashboard', path: 'dashboard', icon: <TrendingUp size={18} />, isProtected: true },
+    { name: 'Customers', path: 'customers', icon: <Users size={18} />, isProtected: true },
+    { name: 'Vehicles', path: 'vehicles', icon: <Car size={18} />, isProtected: true },
+    { name: 'Service Records', path: 'services', icon: <Wrench size={18} />, isProtected: true },
+    { name: 'Work Orders', path: 'workorders', icon: <CheckSquare size={18} />, isProtected: true },
+    { name: 'Invoices', path: 'invoices', icon: <FileText size={18} />, isProtected: true },
+    { name: 'Contact', path: 'contact', icon: <Mail size={18} />, isProtected: false }
   ];
 
   const getPageTitle = () => {
@@ -76,6 +90,8 @@ export function AppLayout({ id, activePath, onNavigate, children }: AppLayoutPro
           {navigationItems.map((item, idx) => {
             const isActive = activePath === item.path;
             const itemNum = `0${idx + 1}`;
+            const showLock = item.isProtected && !isAuthenticated;
+            
             return (
               <button
                 key={item.path}
@@ -90,7 +106,12 @@ export function AppLayout({ id, activePath, onNavigate, children }: AppLayoutPro
                   <span className={`transition-colors duration-200 ${isActive ? 'text-[#A13D2D]' : 'text-zinc-500 group-hover:text-zinc-300'}`}>
                     {item.icon}
                   </span>
-                  <span className="text-[11px] uppercase tracking-widest font-bold font-sans">{item.name}</span>
+                  <span className="text-[11px] uppercase tracking-widest font-bold font-sans flex items-center gap-1.5">
+                    {item.name}
+                    {showLock && (
+                      <Lock size={10} className="text-[#A13D2D] shrink-0 animate-pulse" />
+                    )}
+                  </span>
                 </div>
                 <span className="text-[11px] font-serif italic font-light opacity-50">{itemNum}</span>
               </button>
@@ -100,15 +121,42 @@ export function AppLayout({ id, activePath, onNavigate, children }: AppLayoutPro
 
         {/* BOTTOM USER AREA & STATS */}
         <div className="p-4 border-t border-zinc-800 bg-black/40 space-y-3 shrink-0 text-xs">
-          <div className="flex items-center gap-3 px-2 py-1">
-            <div className="w-8 h-8 rounded-none bg-[#A13D2D] text-white flex items-center justify-center font-bold text-xs uppercase tracking-tighter">
-              AD
+          {isAuthenticated ? (
+            <div className="flex flex-col gap-2 p-1">
+              <div className="flex items-center gap-3 px-1">
+                <div className="w-8 h-8 rounded-none bg-[#A13D2D] text-white flex items-center justify-center font-bold text-xs uppercase tracking-tighter shrink-0">
+                  {userEmail ? userEmail.slice(0, 2).toUpperCase() : 'AD'}
+                </div>
+                <div className="truncate flex-1">
+                  <p className="font-bold text-white uppercase tracking-wider text-[10px] leading-snug">Manager Session</p>
+                  <p className="text-[9px] text-zinc-400 font-mono truncate leading-none">{userEmail}</p>
+                </div>
+              </div>
+              <button
+                onClick={onSignOut}
+                className="w-full mt-1.5 py-2 bg-zinc-800 border-2 border-zinc-700 text-zinc-300 hover:text-white hover:bg-[#A13D2D] hover:border-transparent font-mono font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 pointer-events-auto cursor-pointer transition-all"
+              >
+                <LogOut size={12} />
+                <span>Revoke Access</span>
+              </button>
             </div>
-            <div className="truncate">
-              <p className="font-bold text-white uppercase tracking-wider text-[10px] leading-snug">Manager Portal</p>
-              <p className="text-[9px] text-zinc-500 font-mono truncate leading-none">goodpersonh2o8686@...</p>
+          ) : (
+            <div className="flex flex-col gap-2 p-1 bg-[#2C1D1B]/40 border border-[#A13D2D]/30">
+              <div className="space-y-0.5 px-1.5 pt-1">
+                <p className="font-bold text-[#A13D2D] uppercase tracking-widest text-[9px] flex items-center gap-1">
+                  <Lock size={8} />
+                  <span>RESTRICTED GUEST</span>
+                </p>
+                <p className="text-[9px] text-zinc-500 leading-snug">Workspace database is locked of view.</p>
+              </div>
+              <button
+                onClick={onSignInClick}
+                className="w-full mt-1 py-1.5 bg-[#A13D2D] hover:bg-[#A13D2D]/90 text-white font-mono font-bold text-[9px] uppercase tracking-widest flex items-center justify-center gap-1 cursor-pointer pointer-events-auto transition-all"
+              >
+                <span>Authorize Portal</span>
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </aside>
 
@@ -117,6 +165,9 @@ export function AppLayout({ id, activePath, onNavigate, children }: AppLayoutPro
         <div className="flex items-center gap-2">
           <span className="text-[8px] uppercase tracking-[0.2em] font-bold text-[#A13D2D]">Vol 04</span>
           <span className="font-serif italic text-xl">Garage OS</span>
+          {!isAuthenticated && (
+            <span className="text-[8px] border border-[#A13D2D] text-[#A13D2D] px-1 font-mono uppercase bg-[#2C1D1B]/40">Locked</span>
+          )}
         </div>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -128,27 +179,66 @@ export function AppLayout({ id, activePath, onNavigate, children }: AppLayoutPro
 
       {/* MOBILE MENUS */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-30 bg-black/70 backdrop-blur-xs pt-16">
-          <nav className="bg-[#1A1A1A] border-b border-zinc-800 px-6 py-6 space-y-1.5 text-zinc-300">
-            {navigationItems.map((item, idx) => {
-              const isActive = activePath === item.path;
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => handleNavItemClick(item.path)}
-                  className={`w-full flex items-center justify-between py-3 px-4 rounded-none text-left text-xs uppercase tracking-widest font-bold pointer-events-auto cursor-pointer ${
-                    isActive ? 'bg-[#F9F7F2] text-[#1A1A1A]' : 'text-zinc-400 hover:bg-zinc-800/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {item.icon}
-                    <span>{item.name}</span>
+        <div className="md:hidden fixed inset-0 z-30 bg-black/75 backdrop-blur-xs pt-16">
+          <div className="bg-[#1A1A1A] border-b border-zinc-800">
+            <nav className="px-6 py-6 space-y-1.5 text-zinc-350">
+              {navigationItems.map((item, idx) => {
+                const isActive = activePath === item.path;
+                const showLock = item.isProtected && !isAuthenticated;
+                
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => handleNavItemClick(item.path)}
+                    className={`w-full flex items-center justify-between py-3 px-4 rounded-none text-left text-xs uppercase tracking-widest font-bold pointer-events-auto cursor-pointer ${
+                      isActive ? 'bg-[#F9F7F2] text-[#1A1A1A]' : 'text-zinc-400 hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {item.icon}
+                      <span className="flex items-center gap-1.5">
+                        {item.name}
+                        {showLock && <Lock size={10} className="text-[#A13D2D]" />}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-serif italic">0{idx + 1}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="p-6 border-t border-zinc-800 bg-[#141414] text-xs">
+              {isAuthenticated ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="truncate">
+                    <p className="font-bold text-white uppercase text-[9px] tracking-widest">Active: {userEmail}</p>
                   </div>
-                  <span className="text-[10px] font-serif italic">0{idx + 1}</span>
-                </button>
-              );
-            })}
-          </nav>
+                  <button
+                    onClick={() => {
+                      onSignOut?.();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="px-3 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 uppercase font-mono text-[9px] tracking-wider hover:text-white cursor-pointer"
+                  >
+                    Revoke
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[9px] uppercase tracking-widest text-[#A13D2D]">Workspace Database Locked</div>
+                  <button
+                    onClick={() => {
+                      onSignInClick?.();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="px-3 py-1.5 bg-[#A13D2D] text-white uppercase font-mono text-[9px] tracking-wider cursor-pointer"
+                  >
+                    Auth Portal
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
